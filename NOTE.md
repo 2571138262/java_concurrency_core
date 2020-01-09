@@ -156,75 +156,188 @@
 #### 有哪6个状态？ 每个状态是什么含义
     New(新建)                 用new Thread()新建了一个线程，还没有执行thread.start()
     Runnable(可运行)          用了thread.start()方法以后, 针对了操作系统中的ready和running俩种状态
-    Blocked(阻塞)             当一个线程进入到被synchronize修饰的时候，并且该锁已经被其他线程拿走了，也就是该monitor已经被其他线程拿走了            
+    Blocked(阻塞)             当一个线程进入到被synchronize修饰方法或语句块的时候，并且该锁已经被其他线程拿走了，也就是该monitor已经被其他线程拿走了            
     Waiting(等待)             当调用Object.wait()、Thread.join()、LockSupport.park()      
     Timed Waiting(定时等待)   当调用Thread.sleep(time)、Object.wait(time)、Thread.join(time)、LockSupport.parkNanos(time)、LockSupport.parkUntil(time)
-    Terminated(终止)          执行完成
+    Terminated(终止)          run()方法正常执行完毕，或者是出现了一个没有被捕获的异常，终止了run()方法
 ##### Blocked状态和Waiting状态的区别是：Blocked状态等待的是其他线程释放一个排他锁，释放一个monitor；而Waiting和Timed Waiting等待的被唤醒或者一段被设置好的时间
 
-#### New已创建但还尚未启动的新线程
-#### Runnable可运行
-#### Blocked被阻塞
-#### waiting等待
-#### Timed waiting 限期等待
-#### Terminated终止
 #### 阻塞状态
-#### 线程状态的源码分析
+##### 1、一般习惯而言，把Blocked(被阻塞)、Waiting(等待)、Timed_waiting(计时等待)都称为阻塞状态
+##### 2、不仅仅是Blocked
+###### 阻塞很长时间和运行需要很长时间的方法的区别
+    在阻塞的情况下，什么时候被唤醒是不受自己控制的
+    而执行时间很长的方法是可以自己控制的
+    
+   
 #### 常见面试问题
-##### 线程有哪几种状态？ 声明周期是什么
+##### 线程有哪几种状态？ 生命周期是什么
+    
 ### 五、Thread和Object类中和线程相关的重要方法
+
 #### 常用方法概览
 #### wait()、notify()、notifyAll()方法
 ##### wait/notify/notifyAll的作用、用法
-###### 阻塞阶段
-###### 唤醒阶段
-###### 遇到中断
+###### 1、阻塞阶段 
+###### 2、唤醒阶段
+###### 3、遇到中断
+##### 直到以下4中情况之一时，才会被唤醒
+###### 1、另一个线程调用这个对象的notify()方法且刚好被唤醒的是本线程
+###### 2、另一个线程调用这个对象的notifyAll()方法；
+###### 3、过了wait(long timeout)规定的超时时间，如果传入0就是永久等待
+###### 4、线程自身调用了interrupt()
 ##### 代码展示
-###### 普通用法
+###### 普通用法 
 ###### notify和notifyAll展示
 ###### 只释放当前monitor展示
 ##### wait/notify/notifyAll的特点、性质
-##### 原理
+###### 1、用必须先拥有monitor
+###### 2、只能唤醒其中一个
+###### 3、属于Object类
+###### 4、类似功能的Condition
+###### 5、同时持有多个锁的情况， 释放的顺序、获取的顺序不当就会导致死锁的发生
 ##### 注意点
-###### 执行wait/notify/notifyAll前必须获得对应的monitor
-###### 过多的上下文切换，造成性能损耗
-###### 唤醒信号丢失
-###### 过早唤醒问题 (Wakeup too soon)
-##### 常见面试问题
-###### 用程序实现俩个线程交替打印 0 - 100 的奇偶数 
-###### 手写生产者消费者设计模式
-###### 为什么wait()需要在同步代码块内使用，而sleep不需要
-###### 为什么线程通信的方法wait()、notify()和notifyAll()被定义在Object类里？而sleep定义在Thread类里？
-###### wait()方法是属于Object对象的，那调用Thread.wait()会怎么样？
-###### 如何选择用notify还是notifyAll
-###### notifyAll之后所有的线程都会再次抢夺锁，如果某线程抢夺失败怎么办？
-###### 用suspend()和resume()来阻塞线程可以吗？为什么？
+###### 1、执行wait/notify/notifyAll前必须获得对应的monitor
+###### 2、过多的上下文切换，造成性能损耗
+###### 3、唤醒信号丢失
+###### 4、过早唤醒问题 (Wakeup too soon)
+
+#### 常见面试问题
+##### 用程序实现俩个线程交替打印 0 - 100 的奇偶数 
+    偶线程：0
+    基线程：1
+    偶线程：2
+    基本思路：synchronized  存在很多无用操作，性能低
+    更好的方法： wait() 和 notify()
+##### 手写生产者消费者设计模式
+###### 1、为什么要使用生产者和消费者模式？
+           在现实的场景下，经常存在一个生产者生产过快，或者消费者消费过快等问题
+           通过生产者消费者模式可以使生产者和消费者之间进行解耦
+           
+##### 为什么wait()需要在同步代码块内使用，而sleep不需要
+    主要是为了让通信变得可靠，防止死锁或者永久等待的发生，
+    如果不把wait和notify放在代码块中的话，很有可能是执行wait之前，线程突然切到另外一个执行notify的线程
+    因为没有同步代码块保护，线程随时都可能切换，这样对面的所有线程就把notify都执行完毕了，然后再切回来执行这个wait
+    本身的逻辑是想执行完wait之后在执行另一个线程的notify来唤醒它，
+    
+    而sleep针对的是线程自己，和其他线程关系不大
+    
+##### 为什么线程通信的方法wait()、notify()和notifyAll()被定义在Object类里？而sleep定义在Thread类里？
+    在java中wait()、notify()和notifyAll()是锁级别的操作，而锁时属于某个对象的， 
+    每一个对象的对象头中都是含有几位用来保存当前锁的状态的，所以锁实际上是绑定到某一个对象中，而不是线程中
+    
+    反过来想，假设把wait()、notify()和notifyAll()定义在线程(Thread类)中：
+    因为经常会有一个线程持有多个对象锁，多个锁时相互配合的，这样一来某个线程具有多把锁，
+    如果把wait()、notify()和notifyAll()定义在Thread类里，则不能实现一个线程中多个锁相互配合。
+##### wait()方法是属于Object对象的，那调用Thread.wait()会怎么样？
+    Thread中的wait方法在线程退出的时候会自动调用notify唤醒其他线程
+##### 如何选择用notify还是notifyAll
+    唤醒一个线程用notify(),唤醒多个线程用notifyAll()
+##### notifyAll之后所有的线程都会再次抢夺锁，如果某线程抢夺失败怎么办？
+    没有抢到锁的线程会继续等待持有锁的线程释放锁，或者说等待线程调度器的调度
+##### 用suspend()和resume()来阻塞线程可以吗？为什么？
+    不推荐，推荐用wait()和notify()来实现
+##### Java SE 8 和 JDK 8 是什么关系， 是一个东西吗？
+    1、JavaSE(标准版)、JavaEE(企业版)、JavaME(移动版，适合容量非常小的移动端)是什么？
+        现在一概使用JavaSE
+    2、JRE和JDK和JVM是什么关系？
+        JRE(Java Runtime Environment) 运行java程序的环境，包含JVM
+        JDK(Java Development kit) 开发工具，包含JRE 和 JVM
+    3、Java版本升级都包含了那些东西的升级？
+        类的升级和JVM的升级
+    4、Java 8 和 Java 1.8 和 JDK 8 是什么关系， 是同一个东西吗？
+        Java 8 代表 JavaSE 8 
+    
+##### join()和sleep()和wait()期间线程的状态分别是什么？ 为什么？
+
+
 #### sleep()方法详解
-##### 作用
-##### 响应中断
-###### 代码例子
+##### 作用：只想让线程在预期的时间执行，其他时候不要占用CPU资源
+##### sleep 方法不释放锁
+    1、包括synchronized和lock
+    2、和wait不同，wait会释放锁
+##### sleep方法响应中断
+    1、抛出InterruptedException
+    2、清除中断状态
 ###### 第二种语法(更优雅)
-##### 原理
+    更优雅 可以对负数进行忽略处理
+    TimeUnit.HOURS.sleep(3);        // 3小时
+    TimeUnit.MINUTES.sleep(25);     // 25分钟
+    TimeUnit.SECONDS.sleep(1);      // 1秒钟
+    
+    public void sleep(long timeout) throws InterruptedException {
+            if (timeout > 0) {      // 如果参数小于0 直接跳过，什么都不做
+                long ms = toMillis(timeout);
+                int ns = excessNanos(timeout, ms);
+                Thread.sleep(ms, ns);
+            }
+    }
+    
+    Thread.sleep(5000) 只能接受long类型的参数，休眠时间需要我们自己转换
+    
+    public static void sleep(long millis, int nanos)
+        throws InterruptedException {
+            if (millis < 0) {       // 如果参数小于0 会抛出异常
+                throw new IllegalArgumentException("timeout value is negative");
+            }
+            if (nanos < 0 || nanos > 999999) {
+                throw new IllegalArgumentException(
+                                    "nanosecond timeout value out of range");
+            }
+            if (nanos >= 500000 || (nanos != 0 && millis == 0)) {
+                millis++;
+            }
+            sleep(millis);
+    }
+    
 ##### 总结(一句话总结，方便记忆)
+###### sleep方法可以让线程进入Waiting状态，并且不占用CPU资源，但是不释放锁，知道规定时间后再执行，休眠期间如果被中断，会抛出InterruptedException异常，并清除中断状态
+
+##### sleep方法 - 常见面试问题
+###### wait/notify、sleep异同(方法属于哪个对象？ 线程状态怎么切换？) 
+    1、相同点
+        ①、阻塞，           都可以使线程进行阻塞
+        ②、响应中断，        即便是在休眠期间遇到interrupt，也可以响应中断
+    2、不同点
+        ①、同步方法中：    wait 和 notify 是必须在同步方法中去执行，sleep不需要
+        ②、释放锁：        wait 会释放锁，而sleep方法是不会释放锁的
+        ③、指定时间：      sleep方法必须需要参数，而wait如果不传参数则是直到自己被唤醒
+        ④、所属类：        wait 和 notify是属于Object的方法， sleep是属于 Thread的方法
+    
+
 #### join()方法
-##### 作用
-##### 语法
+##### 作用：因为新的线程加入我们，所以我们要等他们执行完成再出发
+##### 用法：mian等待thread1执行完毕，注意谁等谁： 主线程等待调用了该方法的线程
 ##### 例子 
 ###### 普通用法
-###### 遇到中断
-###### 在join期间，线程到底是什么状态?
+###### 遇到中断 
+###### 在join期间，线程到底是什么状态?   WAITING
 ##### 注意点
+###### CountDownLatch 或 CyclicBarrier类
+    尽量不要使用join()方法，要使用这些类似功能的成熟的工具类
 ##### join(原理) 
+    每个Thread类在执行了run方法之后，都会自动执行notify方法来唤醒其他等待的线程
 ###### 分析源码
 ##### 常见面试问题 
-###### 在join期间，线程处于那种线程状态
-#### yield()方法
-##### 作用
-##### 定位
-##### yeild 和 sleep 区别
+###### 在join期间，线程处于那种线程状态？WAITING
+
+
+#### yield()方法 
+##### 作用：放弃已经获取到的CPU资源, 但是线程的状态仍然是 Runnable 状态
+##### 定位： JVM不保证遵循
+##### yeild 和 sleep 区别 ？ 是否随时可能再次被调度
+    yeild方法只是暂时将自己的调度权放弃，但是在下一次竞争中还是能参与CPU资源的抢占的 
+    sleep会放弃当前CPU的调度权，状态处于 TIMED_WAITING 状态，等待休眠时间到了才重新恢复到 Runnable
+    
+
+    
 #### 获取当前执行线程的引用: Thread.currentThread()方法
+
 #### start()和run()方法介绍详见《启动线程的正确方式》
+
 #### stop()、suspend()、resume()详见《错误的停止方法》
+
+
 ### 六、线程各属性
 #### 线程各属性纵览
 #### 线程id
@@ -247,6 +360,8 @@
 #### 各属性总结
 #### 面试常见问题 
 ##### 为什么Java中不建议使用线程组
+
+
 ### 七、线程的为捕获异常UncaughtException应该如何处理？
 #### 为什么需要UncaughtExceptionHandler？
 #### 彩蛋：补充知识点 --- Java异常体系
@@ -260,6 +375,8 @@
 ##### 常见面试问题
 ###### run方法是否可以跑出异常？ 如果跑出异常，线程的状态回事怎么样？
 ###### 线程中如何处理某个未处理异常
+
+
 ### 八、线程是把双刃剑：多线程或导致性能问题(线程引入的开销，上下文切换)
 #### 线程安全
 ##### 什么是线程安全
