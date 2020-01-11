@@ -30,7 +30,7 @@
 
 #### 3>、JVM内存结构
 ##### （1）、图形展示
-
+![Image](https://github.com/2571138262/java_concurrency_core/blob/master/images-folder/JVMneicunjiegou.jpg)
 ##### （2）、堆区（所有线程共享）
 ##### （3）、栈区（每个线程私有）
 ##### （4）、方法区（所有线程共享）
