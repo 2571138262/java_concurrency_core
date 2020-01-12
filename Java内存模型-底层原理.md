@@ -79,8 +79,55 @@
 ![Image](https://github.com/2571138262/java_concurrency_core/blob/master/images-folder/chongpaixudehaochu.jpg)
 
 #### 3>、重排序的3中情况：编译器优化、CPU指令重排、内存的"重排序"
-
+##### （1）、编译器优化：包括JVM， JIT编译器等
+    假设编译器发现把俩个a的操作放在一起可能会提高效率，
+    尤其是在上下没有依赖关系，编译器就更会觉得既然没有依赖关系，重排就没有影响的
+##### （2）、CPU指令重排：就算编译器不发生重排，CPU也可能对指令进行重排
+    CPU也可能会对指令进行重排序
+##### （3）、内存的"重排序" ：线程A的修改 线程B却看不见，引出可见性问题
+    
+    
 ### 6、可见性 (JMM)
+#### 1>、案例：演示什么是可见性问题
+![Image](https://github.com/2571138262/java_concurrency_core/blob/master/images-folder/neicunkejianxingwenti1.jpg)
+#### 2>、为什么会有可见性问题
+![Image](https://github.com/2571138262/java_concurrency_core/blob/master/images-folder/weishenmehuiyoukejianxingwenti.jpg)
+##### （1）、CPU有多级缓存，导致读的数据过期
+###### ①、高速缓存(上层缓存 L1)的容量比主内存小，但是速度仅次于寄存器，所以在CPU和主内存之间就多了Cache层
+###### ②、线程间的对于共享变量的可见性问题不是直接由多和引起的，而是由多缓存引起的。
+###### ③、如果所有核心都只有用一个缓存，那么也就不存在课件性问题了，
+###### ④、但是通常情况下，每个核心都会将自己需要的数据读到独占缓存中，数据修改后也是写入到缓存中，然后等待刷入到主存中，所以会导致有些核心读取的值是一个过期的值
+
+#### 3>、JMM的抽象：主内存和本地内存
+##### （1）、什么是主内存和本地内存
+###### ①、java作为高级语言，屏蔽了这些底层细节，用JMM定义了一套读写数据的规范，虽然我们不需要关心一级缓存和二级缓存的问题，但是，JMM抽象了主内存和本地内存的概念
+###### ②、这里说的本地内存并不是真的是一块给每个线程分配的内存，而是JMM的一个抽象，是对于寄存器、一级缓存、二级缓存等的抽象
+![Image](https://github.com/2571138262/java_concurrency_core/blob/master/images-folder/zhuneicunhebendineicun.jpg)
+![Image](https://github.com/2571138262/java_concurrency_core/blob/master/images-folder/zhuneicunhebendineicun2.jpg)
+
+##### （2）、主内存和本地内存的关系
+###### ①、JMM有以下规定：(重要)
+* **所有的变量都存储在主内存中，同时每个线程也有自己独立的工作内存，工作内存中的变量内容是主内存中的拷贝**
+* **线程不能直接读写主内存中的变量，而是只能操作自己工作内存中的变量，然后再同步到主内存中**
+* **主内存是多个线程共享的，但是线程间不共享工作内存，如果线程间需要通信，必须借助主内存中转来完成**
+
+**所有共享变量存在于主内存中，每个线程有自己的本地内存，而且线程读写共享数据也是通过本地内存交换的，交换的过程不是实时的，所以才导致了可见性问题**
+
+#### 4>、Happens-Before原则
+##### （1）、单线程原则
+![Image](https://github.com/2571138262/java_concurrency_core/blob/master/images-folder/danxianchengyuanze.jpg)
+    Happens-Before的可见性保证的是如果没有发生重排序，后边的语句能看到前边执行的语句
+    如果发生了重排序了，被排在后边的语句依然能够看到排在前边的语句
+    Happens-Before并不影响重排序
+
+##### （2）、锁操作(synchronized和Lock)
+![Image](https://github.com/2571138262/java_concurrency_core/blob/master/images-folder/suocaozuo.jpg)
+    如果一个线程对锁解锁了，另外一个线程对锁加锁了，那么这个时候加锁之后，它一定能够看到解锁之前的所有操作
+
+#### 5>、volatile关键字
+#### 6>、能保证可见性的措施
+#### 7>、升华：对synchronized可见性的正确理解
+
 
 ### 7、原子性 (JMM)
 
