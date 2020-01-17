@@ -9,8 +9,8 @@ import java.util.concurrent.CountDownLatch;
  */
 public class OutOfOrderExecution {
 
-    private static int x = 0, y = 0;
-    private static int a = 0, b = 0;
+    private volatile static int x = 0, y = 0;
+    private volatile static int a = 0, b = 0;
 
     public static void main(String[] args) throws InterruptedException {
         int i = 0;
